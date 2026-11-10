@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0F1A4D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Employee Time Clock</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+/* ===================== BRANDING — edit these ===================== */
+:root {
+  /* Royal Staffing Corp. palette, taken from the company website */
+  --brand-bg: #0F1A4D;       /* deep royal blue (left panel) */
+  --brand-bg-2: #1B2A6B;     /* royal blue (left panel gradient) */
+  --royal: #2E4494;          /* lighter royal blue */
+  --gold: #C9A227;           /* gold trim */
+  --gold-light: #E8D488;
+  --accent: #C9A227;         /* location badge */
+  --in: #C9A227;             /* CLOCK IN button (gold) */
+  --in-text: #0F1A4D;
+  --out: #1B2A6B;            /* CLOCK OUT button (royal blue) */
+  --danger: #b91c1c;
+  --warn: #b91c1c;           /* error cards */
+  --surface: #F6F2E6;        /* cream background */
+  --card: #ffffff;
+  --text: #12162B;
+  --muted: #5b6079;
+  --radius: 18px;
+  --display: 'Fraunces', Georgia, 'Times New Roman', serif;
+}
+/* ================================================================= */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--surface); color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-user-select: none; user-select: none; touch-action: manipulation; overscroll-behavior: none; }
+button { font: inherit; border: 0; cursor: pointer; touch-action: manipulation; }
+.hidden { display: none !important; }
+
+#app { height: 100vh; height: 100dvh; display: grid; grid-template-columns: 44% 56%; }
+@media (orientation: portrait) { #app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } }
+
+/* ---------- Left: brand + clock ---------- */
+.brand { background: linear-gradient(160deg, var(--brand-bg), var(--brand-bg-2)); color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  padding: clamp(16px, 4vh, 48px) clamp(16px, 3vw, 40px); gap: clamp(6px, 1.6vh, 16px); position: relative;
+  border-right: 4px solid var(--gold); }
+@media (orientation: portrait) { .brand { border-right: 0; border-bottom: 4px solid var(--gold); } }
+.logo { width: clamp(64px, 14vh, 128px); height: clamp(64px, 14vh, 128px); border-radius: 24px; object-fit: contain;
+  background: rgba(255,255,255,.08); display: grid; place-items: center; font-weight: 800;
+  font-size: clamp(26px, 5.5vh, 52px); letter-spacing: 1px; color: #fff; }
+img.logo { background: transparent; border-radius: 0; width: clamp(96px, 24vh, 210px); height: clamp(96px, 24vh, 210px); }
+.company { font-family: var(--display); font-size: clamp(20px, 3.6vh, 34px); font-weight: 700; letter-spacing: .3px; }
+.title { font-size: clamp(11px, 1.7vh, 15px); letter-spacing: .32em; color: var(--gold-light); font-weight: 600; }
+.loc { margin-top: 4px; background: var(--accent); color: var(--brand-bg); font-weight: 800; letter-spacing: .18em;
+  padding: 8px 22px; border-radius: 999px; font-size: clamp(14px, 2.3vh, 20px); }
+.clock { font-size: clamp(56px, 13vh, 128px); font-weight: 700; font-variant-numeric: tabular-nums;
+  line-height: 1; margin-top: clamp(6px, 2vh, 20px); letter-spacing: -1px; }
+.clock small { font-size: .32em; font-weight: 600; margin-left: 8px; opacity: .8; letter-spacing: 1px; }
+.date { font-size: clamp(15px, 2.6vh, 24px); opacity: .85; }
+.hint { font-size: clamp(12px, 1.8vh, 15px); opacity: .6; margin-top: clamp(4px, 2vh, 18px); max-width: 30ch; }
+.net { position: absolute; bottom: 14px; left: 0; right: 0; font-size: 13px; opacity: .75;
+  display: flex; align-items: center; justify-content: center; gap: 8px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #94a3b8; }
+.net.on .dot { background: #4ade80; box-shadow: 0 0 0 4px rgba(74,222,128,.18); }
+.net.off .dot { background: #f87171; box-shadow: 0 0 0 4px rgba(248,113,113,.2); }
+@media (orientation: portrait) {
+  .brand { padding-bottom: 40px; }
+  .clock { font-size: clamp(56px, 8vh, 100px); margin-top: 0; }
+  img.logo { width: clamp(72px, 10vh, 130px); height: clamp(72px, 10vh, 130px); }
+  .brand { padding-top: clamp(12px, 2vh, 28px); gap: clamp(4px, 1vh, 10px); }
+  .hint { display: none; }
+}
+@media (orientation: portrait) and (max-width: 600px) {
+  .brand { padding: 14px 12px 34px; gap: 4px; }
+  .logo, img.logo, .title { display: none; }
+  .company { font-size: 17px; } .loc { padding: 5px 16px; font-size: 13px; }
+  .clock { font-size: 48px; margin-top: 2px; } .date { font-size: 14px; }
+  .net { bottom: 8px; }
+}
+
+/* ---------- Right: keypad ---------- */
+.pad { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: clamp(14px, 3vh, 36px) clamp(16px, 4vw, 56px); gap: clamp(10px, 2.2vh, 22px); }
+.prompt { font-size: clamp(18px, 3vh, 26px); font-weight: 600; color: var(--muted); }
+.dots { display: flex; gap: 18px; height: 28px; align-items: center; }
+.dots span { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #cbd5e1; transition: all .12s; }
+.dots span.f { background: var(--brand-bg-2); border-color: var(--gold); transform: scale(1.08); }
+.dots.shake { animation: shake .35s; }
+@keyframes shake { 20%,60% { transform: translateX(-10px); } 40%,80% { transform: translateX(10px); } }
+.keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(8px, 1.6vh, 14px);
+  width: min(100%, 460px); }
+.key { background: var(--card); border-radius: var(--radius); height: clamp(58px, 10.5vh, 92px);
+  font-size: clamp(26px, 4.6vh, 40px); font-weight: 600; color: var(--text);
+  box-shadow: 0 1px 0 rgba(15,23,42,.06), 0 2px 10px rgba(15,23,42,.06); transition: transform .06s, background .1s; }
+.key:active { transform: scale(.96); background: #e8edf5; }
+.key.fn { font-size: clamp(15px, 2.4vh, 20px); color: var(--muted); font-weight: 600; background: transparent; box-shadow: none; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: min(100%, 460px); margin-top: 4px; }
+.act { height: clamp(64px, 11vh, 96px); border-radius: var(--radius); color: #fff; font-weight: 800;
+  font-size: clamp(18px, 3vh, 26px); letter-spacing: .06em; transition: opacity .15s, transform .06s;
+  box-shadow: 0 6px 18px rgba(15,23,42,.18); }
+.act:active { transform: scale(.97); }
+.act.in { background: var(--in); color: var(--in-text); } .act.out { background: var(--out); }
+.act:disabled { opacity: .3; box-shadow: none; }
+.lang { position: absolute; top: clamp(10px, 2.4vh, 24px); right: clamp(12px, 2.4vw, 28px); background: var(--card);
+  color: var(--text); font-weight: 700; font-size: clamp(14px, 2.2vh, 18px); padding: 10px 20px; border-radius: 999px;
+  box-shadow: 0 1px 0 rgba(15,23,42,.06), 0 2px 10px rgba(15,23,42,.1); }
+.lang:active { background: #e8edf5; }
+.date::first-letter { text-transform: uppercase; }
+
+/* ---------- Offline banner ---------- */
+#banner { position: fixed; top: 0; left: 0; right: 0; background: var(--danger); color: #fff; z-index: 20;
+  text-align: center; padding: 12px 16px; font-weight: 600; font-size: clamp(14px, 2.2vh, 18px); }
+
+/* ---------- Overlays ---------- */
+.overlay { position: fixed; inset: 0; background: rgba(2,6,23,.55); backdrop-filter: blur(4px);
+  display: grid; place-items: center; z-index: 30; animation: fade .15s; }
+@keyframes fade { from { opacity: 0; } }
+.card { background: var(--card); border-radius: 28px; width: min(92vw, 620px); overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,.35); animation: pop .22s cubic-bezier(.2,1.3,.4,1); text-align: center; }
+@keyframes pop { from { transform: scale(.9); opacity: 0; } }
+.card .head { padding: 26px 24px 20px; color: #fff; }
+.card .icon { width: 76px; height: 76px; border-radius: 50%; background: rgba(255,255,255,.2);
+  display: grid; place-items: center; margin: 0 auto 12px; font-size: 44px; font-weight: 800; }
+.card h2 { margin: 0; font-size: clamp(22px, 3.6vh, 32px); letter-spacing: .06em; }
+.card .body { padding: 24px 28px 8px; }
+.card .name { font-size: clamp(24px, 4.2vh, 38px); font-weight: 800; margin-bottom: 6px; }
+.card .line { font-size: clamp(16px, 2.6vh, 22px); color: var(--muted); margin: 6px 0; }
+.card .big { font-size: clamp(20px, 3.4vh, 30px); color: var(--text); font-weight: 700; }
+.card table { margin: 12px auto 4px; border-collapse: collapse; font-size: clamp(16px, 2.6vh, 22px); }
+.card td { padding: 6px 14px; text-align: left; } .card td:first-child { color: var(--muted); }
+.card td:last-child { font-weight: 700; }
+.card .foot { padding: 6px 24px 22px; color: var(--muted); font-size: clamp(14px, 2vh, 17px); }
+.card .bar { height: 6px; background: currentColor; opacity: .5; transform-origin: left; }
+.card.ok-in .head, .card.ok-out .head { background: linear-gradient(160deg, var(--brand-bg), var(--brand-bg-2)); border-bottom: 4px solid var(--gold); }
+.card.ok-in .bar, .card.ok-out .bar { background: var(--gold); color: var(--gold); opacity: 1; }
+.card.ok-in .icon, .card.ok-out .icon { background: var(--gold); color: var(--brand-bg); }
+.card h2, .card .name { font-family: var(--display); }
+.card.err .head, .card.err .bar { background: var(--warn); color: var(--warn); }
+.card .head { color: #fff !important; }
+.review { margin: 10px auto 0; background: #fef3c7; color: #92400e; border-radius: 12px; padding: 10px 14px;
+  font-size: clamp(14px, 2vh, 17px); max-width: 44ch; }
+.spinner { width: 64px; height: 64px; border-radius: 50%; border: 6px solid rgba(255,255,255,.25);
+  border-top-color: #fff; animation: spin .8s linear infinite; margin: 0 auto 18px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#busy .msg { color: #fff; font-size: 24px; font-weight: 600; text-align: center; }
+
+/* ---------- Setup ---------- */
+#setup { position: fixed; inset: 0; background: linear-gradient(160deg, var(--brand-bg), var(--brand-bg-2));
+  display: grid; place-items: center; z-index: 40; color: #fff; }
+#setup .box { background: var(--card); color: var(--text); border-radius: 24px; padding: 32px; width: min(92vw, 520px);
+  text-align: center; user-select: text; -webkit-user-select: text; }
+#setup h1 { margin: 0 0 6px; font-size: 26px; } #setup p { color: var(--muted); margin: 0 0 18px; }
+#setup input { width: 100%; font-size: 26px; text-align: center; letter-spacing: .12em; padding: 14px;
+  border: 2px solid #cbd5e1; border-radius: 14px; text-transform: uppercase; font-family: ui-monospace, Menlo, monospace; }
+#setup input:focus { outline: none; border-color: var(--out); }
+#setup .row { display: flex; gap: 12px; margin-top: 16px; }
+#setup .row button { flex: 1; height: 56px; border-radius: 14px; font-weight: 700; font-size: 18px; }
+#setupGo { background: var(--out); color: #fff; } #setupCancel { background: #e2e8f0; color: var(--text); }
+#setupMsg { min-height: 24px; margin-top: 14px; font-weight: 600; }
+#setupMsg.bad { color: var(--danger); } #setupMsg.good { color: var(--in); }
+
+/* ---------- Phone-size screens (testing on an iPhone) ---------- */
+@media (orientation: portrait) and (max-width: 600px) {
+  .pad { gap: 8px; padding: 48px 16px 12px; justify-content: flex-start; }
+  .lang { top: 8px; right: 12px; padding: 6px 14px; font-size: 13px; }
+  .prompt { font-size: 17px; }
+  .key { height: 8.2vh; min-height: 50px; font-size: 26px; }
+  .act { height: 8.5vh; min-height: 56px; font-size: 16px; letter-spacing: .03em; }
+}
+</style>
+</head>
+<body>
+
+<div id="app" class="hidden">
+  <aside class="brand">
+    <div id="logoWrap"></div>
+    <div class="company" id="company"></div>
+    <div class="title" data-i="title">EMPLOYEE TIME CLOCK</div>
+    <div class="loc" id="loc">—</div>
+    <div class="clock" id="clock">--:--</div>
+    <div class="date" id="date">&nbsp;</div>
+    <div class="hint" data-i="hint">Please verify your name and time before leaving.</div>
+    <div class="net" id="net"><span class="dot"></span><span id="netTxt">Connecting…</span></div>
+  </aside>
+  <main class="pad">
+    <button class="lang hidden" id="langBtn"></button>
+    <div class="prompt" data-i="prompt">Enter your 4-digit PIN</div>
+    <div class="dots" id="dots"><span></span><span></span><span></span><span></span></div>
+    <div class="keys" id="keys">
+      <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+      <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+      <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+      <button class="key fn" data-k="C" data-i="clear">Clear</button><button class="key" data-k="0">0</button><button class="key fn" data-k="B" aria-label="Backspace" data-i="back">⌫ Back</button>
+    </div>
+    <div class="actions">
+      <button class="act in" id="btnIn" data-i="in" disabled>CLOCK IN</button>
+      <button class="act out" id="btnOut" data-i="out" disabled>CLOCK OUT</button>
+    </div>
+  </main>
+</div>
+
+<div id="banner" class="hidden" data-i="banner">⚠️ No internet connection. Punches can't be recorded — please tell a manager.</div>
+
+<div id="busy" class="overlay hidden"><div><div class="spinner"></div><div class="msg" data-i="saving">Saving… please wait</div></div></div>
+<div id="result" class="overlay hidden"></div>
+
+<section id="setup" class="hidden">
+  <div class="box">
+    <h1>Tablet setup</h1>
+    <p id="setupHint">Enter this location's activation code. A manager can find it in the Google Sheet under ⏱ Time Clock › Show tablet activation codes.</p>
+    <input id="setupCode" maxlength="19" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX">
+    <div class="row">
+      <button id="setupCancel" class="hidden">Cancel</button>
+      <button id="setupGo">Activate</button>
+    </div>
+    <div id="setupMsg"></div>
+  </div>
+</section>
+
+<script>
+/* ===================== SETTINGS — edit these ===================== */
+const CONFIG = {
+  // Your Apps Script web app URL (ends in /exec). Needed when this page is hosted
+  // outside Apps Script (e.g. GitHub Pages). Ignored when served by Apps Script itself.
+  API_URL: 'https://script.google.com/macros/s/AKfycby6f3N6D3mX4JQNcLXsYPI_FBL677Fw7SwDPpbgMawc_y3lJydv5wIQKI8FmorEI-eS3A/exec',
+  COMPANY_NAME: 'Royal Staffing Corp.',
+  LOGO_URL: 'logo.svg',     // the crest from the website; swap in 'logo.png' for a different logo, or '' for initials
+  LANGUAGES: ['en', 'es'],  // languages offered on the keypad; use ['en'] to hide the button
+  DEFAULT_LANG: 'en',       // the screen returns to this after each punch
+  RESULT_SECONDS: 4,        // success screen
+  ERROR_SECONDS: 6,         // error screen
+  PIN_IDLE_SECONDS: 20,     // clear a half-typed PIN
+  PING_SECONDS: 90,         // connection check
+  REQUEST_TIMEOUT_MS: 25000,
+  TIMEZONE: 'America/New_York',
+};
+/* ================================================================= */
+
+const $ = id => document.getElementById(id);
+const IN_GAS = !!(window.google && google.script && google.script.run);
+const S = { pin: '', busy: false, key: null, location: null, offset: 0, lastAttempt: null,
+  idleTimer: null, resultTimer: null, overlay: false, lastReload: Date.now(),
+  lang: CONFIG.DEFAULT_LANG, online: null, resetLang: false };
+
+/* ---------- Languages ---------- */
+const I18N = {
+  en: { name: 'English', locale: 'en-US',
+    title: 'EMPLOYEE TIME CLOCK', hint: 'Please verify your name and time before leaving.',
+    prompt: 'Enter your 4-digit PIN', clear: 'Clear', back: '⌫ Back', in: 'CLOCK IN', out: 'CLOCK OUT',
+    connecting: 'Connecting…', connected: 'Connected', offline: 'Offline',
+    banner: "⚠️ No internet connection. Punches can't be recorded — please tell a manager.",
+    saving: 'Saving… please wait',
+    inTitle: 'CLOCK IN SUCCESSFUL', welcome: 'Welcome, {name}!', locLine: '{loc} Location', inFoot: 'Have a great shift!',
+    outTitle: 'CLOCK OUT SUCCESSFUL', rowIn: 'Clock In', rowOut: 'Clock Out', rowTotal: 'Total Shift', rowWeek: 'This Week',
+    outFoot: 'Thank you — see you next time!', review: 'This shift was flagged for a manager to review.',
+    tap: 'Tap anywhere to continue', notRecorded: 'Not recorded', wait: 'Please wait', notConfirmed: 'Not confirmed',
+    noNetTitle: 'No internet connection', noNetMsg: 'Your punch was NOT recorded. Please tell a manager.',
+    netFail: "We couldn't reach the server, so your punch was NOT confirmed. Please press the button again. If this keeps happening, tell a manager.",
+    generic: 'Something went wrong. Please try again.',
+    h1: 'hour', h: 'hours', m1: 'minute', m: 'minutes' },
+  es: { name: 'Español', locale: 'es-US',
+    title: 'RELOJ DE ASISTENCIA', hint: 'Verifique su nombre y la hora antes de retirarse.',
+    prompt: 'Ingrese su PIN de 4 dígitos', clear: 'Limpiar', back: '⌫ Borrar', in: 'ENTRADA', out: 'SALIDA',
+    connecting: 'Conectando…', connected: 'Conectado', offline: 'Sin conexión',
+    banner: '⚠️ Sin conexión a internet. No se pueden registrar entradas ni salidas. Avise a un gerente.',
+    saving: 'Guardando… espere por favor',
+    inTitle: 'ENTRADA REGISTRADA', welcome: '¡Hola, {name}!', locLine: 'Sede {loc}', inFoot: '¡Que tenga un buen turno!',
+    outTitle: 'SALIDA REGISTRADA', rowIn: 'Entrada', rowOut: 'Salida', rowTotal: 'Turno total', rowWeek: 'Esta semana',
+    outFoot: '¡Gracias! Hasta la próxima.', review: 'Este turno quedó marcado para que un gerente lo revise.',
+    tap: 'Toque la pantalla para continuar', notRecorded: 'No registrado', wait: 'Espere por favor', notConfirmed: 'Sin confirmar',
+    noNetTitle: 'Sin conexión a internet', noNetMsg: 'Su registro NO se guardó. Avise a un gerente.',
+    netFail: 'No pudimos conectar con el servidor, así que su registro NO fue confirmado. Presione el botón otra vez. Si sigue pasando, avise a un gerente.',
+    generic: 'Algo salió mal. Intente de nuevo.',
+    h1: 'hora', h: 'horas', m1: 'minuto', m: 'minutos',
+    // Server messages by code (English versions come from the server)
+    BAD_PIN: 'PIN no reconocido. Intente de nuevo o hable con un gerente.',
+    LOCKED: 'Demasiados intentos incorrectos. Espere 2 minutos e intente de nuevo.',
+    PIN_CONFLICT: 'Hay un problema con este PIN. Hable con un gerente.',
+    NOT_IN: 'No tiene una entrada registrada, así que no hay salida que marcar. Si olvidó marcar su entrada, avise a un gerente.',
+    ALREADY_IN: 'Ya tiene una entrada registrada en {loc} desde {when}. ¿Quiso marcar SALIDA?',
+    TOO_SOON: 'Su entrada se registró ({when}) hace menos de un minuto. Si de verdad necesita marcar su salida, espere un minuto e intente de nuevo.',
+    SERVER_ERROR: 'No pudimos confirmar su registro. Presione el botón otra vez. Si sigue pasando, avise a un gerente.',
+    BUSY: 'El sistema está ocupado. Presione el botón otra vez.' },
+};
+const LANGS = CONFIG.LANGUAGES.filter(l => I18N[l]);
+if (!I18N[S.lang]) S.lang = 'en';
+function t(key, vars) {
+  let str = (I18N[S.lang] && I18N[S.lang][key]) || I18N.en[key] || '';
+  if (vars) Object.keys(vars).forEach(k => { str = str.split('{' + k + '}').join(vars[k]); });
+  return str;
+}
+const fmtCache = {};
+function F(name, opts) {
+  const k = S.lang + ':' + name;
+  return fmtCache[k] || (fmtCache[k] = new Intl.DateTimeFormat(I18N[S.lang].locale, Object.assign({ timeZone: CONFIG.TIMEZONE }, opts)));
+}
+const fTime = ms => F('time', { hour: 'numeric', minute: '2-digit' }).format(new Date(ms));
+const fDate = ms => F('date', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(ms));
+const fDay = ms => F('day', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(ms));
+const fDayTime = ms => F('daytime', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(ms));
+/** Time alone if `ms` is on the same New York day as `refMs`, otherwise day + time. */
+const fWhen = (ms, refMs) => fDay(ms) === fDay(refMs) ? fTime(ms) : fDayTime(ms);
+function dur(min) {
+  const h = Math.floor(min / 60), m = min % 60;
+  return h + ' ' + t(h === 1 ? 'h1' : 'h') + ' ' + m + ' ' + t(m === 1 ? 'm1' : 'm');
+}
+function setLang(l) {
+  S.lang = I18N[l] ? l : 'en';
+  document.documentElement.lang = S.lang;
+  document.querySelectorAll('[data-i]').forEach(el => { el.textContent = t(el.dataset.i); });
+  $('netTxt').textContent = t(S.online === null ? 'connecting' : S.online ? 'connected' : 'offline');
+  const btn = $('langBtn');
+  btn.classList.toggle('hidden', LANGS.length < 2);
+  if (LANGS.length > 1) btn.textContent = I18N[LANGS[(LANGS.indexOf(S.lang) + 1) % LANGS.length]].name;
+  tick();
+}
+/** After a pause, forget a half-typed PIN and go back to the default language. */
+function armIdle() {
+  clearTimeout(S.idleTimer);
+  if (S.pin || S.lang !== CONFIG.DEFAULT_LANG) {
+    S.idleTimer = setTimeout(() => { clearPin(); setLang(CONFIG.DEFAULT_LANG); }, CONFIG.PIN_IDLE_SECONDS * 1000);
+  }
+}
+
+const store = {
+  get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} },
+  del: k => { try { localStorage.removeItem(k); } catch (e) {} },
+};
+
+function uuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(b, x => x.toString(16).padStart(2, '0')).join('').replace(/(.{8})(.{4})(.{4})(.{4})/, '$1-$2-$3-$4-');
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+
+/* ---------- Transport (single choke point → easy to add an offline queue later) ---------- */
+function api(payload) {
+  payload.clientTime = Date.now(); // informational only; server never trusts it
+  if (IN_GAS) {
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('timeout')), CONFIG.REQUEST_TIMEOUT_MS);
+      google.script.run
+        .withSuccessHandler(r => { clearTimeout(t); resolve(r); })
+        .withFailureHandler(e => { clearTimeout(t); reject(e); })
+        .handleRequest(payload);
+    });
+  }
+  if (!/^https:\/\/script\.google\.com\//.test(CONFIG.API_URL)) return Promise.reject(new Error('API_URL not set'));
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), CONFIG.REQUEST_TIMEOUT_MS);
+  return fetch(CONFIG.API_URL, {
+    method: 'POST', redirect: 'follow', signal: ctrl.signal,
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight
+    body: JSON.stringify(payload),
+  }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .finally(() => clearTimeout(t));
+}
+
+/* ---------- Branding ---------- */
+function applyBranding() {
+  $('company').textContent = CONFIG.COMPANY_NAME;
+  const wrap = $('logoWrap');
+  if (CONFIG.LOGO_URL) {
+    wrap.innerHTML = '<img class="logo" alt="">';
+    const img = wrap.firstChild;
+    img.onerror = () => { wrap.innerHTML = monogram(); };
+    img.src = CONFIG.LOGO_URL;
+  } else wrap.innerHTML = monogram();
+}
+function monogram() {
+  const init = CONFIG.COMPANY_NAME.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+  return '<div class="logo">' + esc(init || '⏱') + '</div>';
+}
+
+/* ---------- Clock ---------- */
+const fmtHM = new Intl.DateTimeFormat('en-US', { timeZone: CONFIG.TIMEZONE, hour: 'numeric', minute: 'numeric', hour12: false });
+function tick() {
+  const now = new Date(Date.now() + S.offset);
+  const parts = F('time', { hour: 'numeric', minute: '2-digit' }).formatToParts(now);
+  const hm = parts.filter(p => p.type !== 'dayPeriod').map(p => p.value).join('').trim();
+  const ap = (parts.find(p => p.type === 'dayPeriod') || {}).value || '';
+  $('clock').innerHTML = esc(hm) + '<small>' + esc(ap) + '</small>';
+  $('date').textContent = F('long', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(now);
+  maybeNightlyReload(now);
+}
+/* Reload once around 3 AM so code updates reach the tablet without anyone touching it.
+   Only reloads after confirming the page itself can be fetched, so a Wi-Fi outage at 3 AM
+   can never leave the tablet on a browser error page. */
+function maybeNightlyReload(now) {
+  if (IN_GAS || S.busy || S.overlay || S.pin || S.reloadCheck) return;
+  const [h, m] = fmtHM.format(now).split(':').map(Number);
+  if (!(h === 3 && m < 30) || Date.now() - S.lastReload < 3600e3) return;
+  if (S.lastReloadTry && Date.now() - S.lastReloadTry < 300e3) return;
+  S.lastReloadTry = Date.now();
+  if (navigator.onLine === false) return;
+  S.reloadCheck = true;
+  fetch(location.href.split('#')[0], { cache: 'no-store' })
+    .then(r => { if (r.ok && !S.busy && !S.overlay && !S.pin) location.reload(); })
+    .catch(() => {})
+    .finally(() => { S.reloadCheck = false; });
+}
+
+/* ---------- Connection ---------- */
+function setOnline(on) {
+  S.online = on;
+  $('net').className = 'net ' + (on ? 'on' : 'off');
+  $('netTxt').textContent = t(on ? 'connected' : 'offline');
+  $('banner').classList.toggle('hidden', on);
+}
+function ping() {
+  if (!S.key) return;
+  const t0 = Date.now();
+  api({ action: 'ping', deviceKey: S.key }).then(r => {
+    if (r && r.ok) {
+      S.offset = r.serverTime + (Date.now() - t0) / 2 - Date.now();
+      if (r.location !== S.location) { S.location = r.location; store.set('tc_location', r.location); renderLocation(); }
+      setOnline(true);
+    } else if (r && r.code === 'NOT_ACTIVATED') {
+      deactivate('This tablet\'s activation code was changed or removed. Enter the new code.');
+    } else setOnline(false);
+  }).catch(() => setOnline(false));
+}
+
+/* ---------- PIN entry ---------- */
+function renderDots() {
+  [...$('dots').children].forEach((d, i) => d.classList.toggle('f', i < S.pin.length));
+  const ready = S.pin.length === 4 && !S.busy;
+  $('btnIn').disabled = !ready; $('btnOut').disabled = !ready;
+}
+function clearPin() { S.pin = ''; renderDots(); clearTimeout(S.idleTimer); }
+function press(k) {
+  if (S.busy || S.overlay) return;
+  if (navigator.vibrate) navigator.vibrate(8);
+  if (k === 'C') clearPin();
+  else if (k === 'B') S.pin = S.pin.slice(0, -1);
+  else if (/^\d$/.test(k) && S.pin.length < 4) S.pin += k;
+  renderDots();
+  armIdle();
+  tryFullscreen();
+}
+
+/* ---------- Punch ---------- */
+function punch(type) {
+  if (S.busy || S.overlay || S.pin.length !== 4) return;
+  const pin = S.pin;
+  clearPin();
+  if (navigator.onLine === false) {
+    setOnline(false);
+    return showError(t('noNetTitle'), t('noNetMsg'));
+  }
+  S.busy = true; renderDots();
+  // Reuse the request ID if the same person retries right after an unconfirmed attempt,
+  // so a punch that actually saved is never recorded twice.
+  const la = S.lastAttempt;
+  const rid = (la && la.pin === pin && la.type === type && Date.now() - la.at < 120000) ? la.rid : uuid();
+  S.lastAttempt = { pin, type, rid, at: Date.now() };
+  $('busy').classList.remove('hidden');
+  api({ action: 'punch', deviceKey: S.key, pin, type, requestId: rid })
+    .then(r => {
+      setOnline(true);
+      if (r && r.ok) { S.lastAttempt = null; showSuccess(r); return; }
+      const code = r && r.code;
+      if (code === 'NOT_ACTIVATED') return deactivate('This tablet is not activated. Enter the activation code.');
+      if (code !== 'SERVER_ERROR' && code !== 'BUSY') S.lastAttempt = null;
+      showError(t(code === 'LOCKED' ? 'wait' : 'notRecorded'), errText(r), code === 'BAD_PIN' || code === 'LOCKED');
+    })
+    .catch(() => {
+      setOnline(false);
+      showError(t('notConfirmed'), t('netFail'));
+    })
+    .finally(() => { S.busy = false; $('busy').classList.add('hidden'); renderDots(); });
+}
+
+/** Error text in the current language. English comes from the server; other languages are built here. */
+function errText(r) {
+  if (!r) return t('generic');
+  const tpl = S.lang !== 'en' && I18N[S.lang][r.code];
+  const needsWhen = tpl && tpl.indexOf('{when}') >= 0;
+  if (tpl && !(needsWhen && !r.sinceMs)) {
+    return t(r.code, { loc: r.location || '', when: r.sinceMs ? fWhen(r.sinceMs, Date.now() + S.offset) : '' });
+  }
+  return r.message || t('generic');
+}
+
+/* ---------- Result screens ---------- */
+function showOverlay(cls, icon, title, bodyHtml, foot, seconds) {
+  S.overlay = true;
+  const el = $('result');
+  el.innerHTML = '<div class="card ' + cls + '"><div class="head"><div class="icon">' + icon + '</div><h2>' + esc(title) +
+    '</h2></div><div class="body">' + bodyHtml + '</div><div class="foot">' + esc(foot) + '</div><div class="bar" id="bar"></div></div>';
+  el.classList.remove('hidden');
+  const bar = $('bar');
+  bar.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: seconds * 1000, easing: 'linear', fill: 'forwards' });
+  clearTimeout(S.resultTimer);
+  S.resultTimer = setTimeout(closeOverlay, seconds * 1000);
+}
+function closeOverlay() {
+  clearTimeout(S.resultTimer);
+  $('result').classList.add('hidden'); $('result').innerHTML = '';
+  S.overlay = false; clearPin();
+  if (S.resetLang) setLang(CONFIG.DEFAULT_LANG); else armIdle(); // after an error, keep the person's language
+}
+function showSuccess(r) {
+  S.resetLang = true;
+  if (r.type === 'IN') {
+    const date = r.atMs ? fDate(r.atMs) : r.date, time = r.atMs ? fTime(r.atMs) : r.time;
+    showOverlay('ok-in', '✓', t('inTitle'),
+      '<div class="name">' + esc(t('welcome', { name: r.name })) + '</div>' +
+      '<div class="line">' + esc(t('locLine', { loc: r.location })) + '</div>' +
+      '<div class="line big">' + esc(date) + ' — ' + esc(time) + '</div>',
+      t('inFoot'), CONFIG.RESULT_SECONDS);
+  } else {
+    const hasMs = r.inMs && r.outMs;
+    const inTime = hasMs ? fWhen(r.inMs, r.outMs) : r.inTime, outTime = hasMs ? fTime(r.outMs) : r.outTime;
+    const total = typeof r.minutes === 'number' ? dur(r.minutes) : r.duration;
+    const week = typeof r.weekMinutes === 'number' && r.weekMinutes > 0 ? dur(r.weekMinutes) : '';
+    showOverlay('ok-out', '✓', t('outTitle'),
+      '<div class="name">' + esc(r.name) + '</div>' +
+      '<table><tr><td>' + esc(t('rowIn')) + '</td><td>' + esc(inTime) + '</td></tr>' +
+      '<tr><td>' + esc(t('rowOut')) + '</td><td>' + esc(outTime) + '</td></tr>' +
+      '<tr><td>' + esc(t('rowTotal')) + '</td><td>' + esc(total) + '</td></tr>' +
+      (week ? '<tr><td>' + esc(t('rowWeek')) + '</td><td>' + esc(week) + '</td></tr>' : '') + '</table>' +
+      (r.needsReview ? '<div class="review">' + esc(t('review')) + '</div>' : ''),
+      t('outFoot'), CONFIG.RESULT_SECONDS + 1 + (r.needsReview ? 2 : 0));
+  }
+}
+function showError(title, msg, shake) {
+  S.resetLang = false;
+  if (shake) { const d = $('dots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); }
+  showOverlay('err', '!', title, '<div class="line big" style="font-weight:600">' + esc(msg) + '</div>',
+    t('tap'), CONFIG.ERROR_SECONDS);
+}
+
+/* ---------- Activation ---------- */
+function renderLocation() { $('loc').textContent = (S.location || '—').toUpperCase(); }
+function showKiosk() {
+  $('setup').classList.add('hidden'); $('app').classList.remove('hidden');
+  renderLocation(); renderDots(); tick(); ping();
+}
+function showSetup(msg, cancellable) {
+  $('setup').classList.remove('hidden');
+  $('setupCancel').classList.toggle('hidden', !cancellable);
+  $('setupCode').value = '';
+  setSetupMsg(msg || (!IN_GAS && !/^https:\/\/script\.google\.com\//.test(CONFIG.API_URL)
+    ? 'Setup needed: paste your Apps Script /exec URL into API_URL in index.html.' : ''), true);
+}
+function setSetupMsg(t, bad) { const m = $('setupMsg'); m.textContent = t || ''; m.className = bad ? 'bad' : 'good'; }
+function deactivate(msg) {
+  S.key = null; S.location = null; store.del('tc_key'); store.del('tc_location');
+  closeOverlay(); $('app').classList.add('hidden'); showSetup(msg, false);
+}
+function activate(code) {
+  const key = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (key.length !== 16) return setSetupMsg('Codes are 16 letters/numbers, like ABCD-EFGH-JKLM-NPQR.', true);
+  setSetupMsg('Checking…', false); $('setupGo').disabled = true;
+  api({ action: 'activate', deviceKey: key }).then(r => {
+    if (r && r.ok) {
+      S.key = r.deviceKey; S.location = r.location; S.offset = r.serverTime - Date.now();
+      store.set('tc_key', S.key); store.set('tc_location', S.location);
+      setSetupMsg('Activated for ' + r.location + ' ✓', false);
+      setTimeout(showKiosk, 700);
+    } else setSetupMsg((r && r.message) || 'Activation failed.', true);
+  }).catch(() => setSetupMsg('Could not reach the server. Check Wi-Fi and the API_URL.', true))
+    .finally(() => { $('setupGo').disabled = false; });
+}
+
+/* ---------- Device niceties ---------- */
+let wakeLock = null;
+async function keepAwake() {
+  try { if ('wakeLock' in navigator && document.visibilityState === 'visible') wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+}
+function tryFullscreen() {
+  const el = document.documentElement;
+  if (IN_GAS || document.fullscreenElement || !el.requestFullscreen) return;
+  if (window.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) return;
+  el.requestFullscreen().catch(() => {});
+}
+
+/* ---------- Wire up ---------- */
+function init() {
+  applyBranding();
+  $('keys').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) press(b.dataset.k); });
+  $('btnIn').addEventListener('click', () => punch('IN'));
+  $('btnOut').addEventListener('click', () => punch('OUT'));
+  $('result').addEventListener('click', closeOverlay);
+  $('langBtn').addEventListener('click', () => {
+    if (S.busy || S.overlay || LANGS.length < 2) return;
+    setLang(LANGS[(LANGS.indexOf(S.lang) + 1) % LANGS.length]);
+    armIdle();
+  });
+  setLang(S.lang);
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    if (!$('setup').classList.contains('hidden')) { if (e.key === 'Enter') activate($('setupCode').value); return; }
+    if (S.overlay) { closeOverlay(); return; }
+    if (/^\d$/.test(e.key)) press(e.key);
+    else if (e.key === 'Backspace') press('B');
+    else if (e.key === 'Escape') press('C');
+  });
+  $('setupGo').addEventListener('click', () => activate($('setupCode').value));
+  $('setupCancel').addEventListener('click', () => { $('setup').classList.add('hidden'); });
+  $('setupCode').addEventListener('input', e => {
+    const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+    e.target.value = raw.replace(/(.{4})(?=.)/g, '$1-');
+  });
+  // Hidden manager gesture: hold the location badge 5 seconds to re-run setup.
+  let holdTimer;
+  const loc = $('loc');
+  loc.addEventListener('pointerdown', () => { holdTimer = setTimeout(() => showSetup('Enter a new activation code, or Cancel.', true), 5000); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => loc.addEventListener(ev, () => clearTimeout(holdTimer)));
+
+  window.addEventListener('online', ping);
+  window.addEventListener('offline', () => setOnline(false));
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { keepAwake(); ping(); } });
+  setInterval(tick, 1000);
+  setInterval(ping, CONFIG.PING_SECONDS * 1000);
+  keepAwake();
+  if (!IN_GAS && 'serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  // Activation code can also arrive in the link: .../#key=XXXX-XXXX-XXXX-XXXX (removed after use)
+  const hashKey = (location.hash.match(/key=([A-Za-z0-9-]+)/) || [])[1];
+  if (hashKey) { history.replaceState(null, '', location.pathname + location.search); }
+  S.key = store.get('tc_key'); S.location = store.get('tc_location');
+
+  const start = urlKey => {
+    const k = hashKey || urlKey;
+    if (k) { showSetup('', !!S.key); $('setupCode').value = k; activate(k); }
+    else if (S.key) showKiosk();
+    else showSetup();
+  };
+  if (IN_GAS && google.script.url) google.script.url.getLocation(l => start(l && l.parameter && l.parameter.key));
+  else start();
+}
+init();
+</script>
+</body>
+</html>
